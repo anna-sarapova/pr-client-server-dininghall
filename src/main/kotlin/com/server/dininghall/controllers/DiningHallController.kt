@@ -1,6 +1,7 @@
 package com.server.dininghall.controllers
 
-import com.server.dininghall.service.DinningHall
+import com.server.dininghall.Table
+import com.server.dininghall.services.DinningHall
 import com.server.dininghall.models.Distribution
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
@@ -25,6 +26,7 @@ class DiningHallController(val dinningHall : DinningHall) {
     // returns a table, if id not specified returns a random table
     @GetMapping("/table")
     fun getTable(@RequestParam(required = false) id: Int?) : String {
-        return dinningHall.getTable(id)
+        val table: Table = dinningHall.getTable(id)
+        return table.toString() + " " + table.tableNumber.toString() + " " + table.tableState
     }
 }
