@@ -25,7 +25,6 @@ class DinningHall(val menu: Menu) {
     private val waitersSize: Int = 0
 
 
-
     // Initialize x tables
     init {
         for(i in 0..tableSize) {
@@ -72,7 +71,7 @@ class DinningHall(val menu: Menu) {
             TableState.FREE -> {
                 logger.info("Table ${table.tableNumber} was occupied")
                 table.tableState = TableState.OCCUPIED
-                table.tableOrder = menu.generateOrder();
+                table.tableOrder = menu.generateOrder(table);
             }
             TableState.EATING -> {
                 logger.info("Table ${table.tableNumber} was freed")

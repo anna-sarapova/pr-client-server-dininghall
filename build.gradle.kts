@@ -21,6 +21,9 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.slf4j:slf4j-api")
+    implementation("net.hamnaberg.json:immutable-json-gson:7.1.0")
+	implementation("com.google.code.gson:gson:2.8.8")
+	implementation("com.xnx3.json:json:1.0")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
