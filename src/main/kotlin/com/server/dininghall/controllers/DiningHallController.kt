@@ -1,8 +1,8 @@
 package com.server.dininghall.controllers
 
 import com.server.dininghall.Table
-import com.server.dininghall.services.DinningHall
 import com.server.dininghall.models.Distribution
+import com.server.dininghall.services.DinningHall
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 
@@ -20,6 +20,7 @@ class DiningHallController(val dinningHall : DinningHall) {
     @PostMapping("/distribution")
     fun distribution(@RequestBody distribution: Distribution) : String {
         logger.info("Order created")
+        dinningHall.addDoneOrder(distribution)
         return "Order with id: " + distribution.order_id + " has been created. To be processed..."
     }
 

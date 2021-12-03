@@ -1,82 +1,94 @@
 package com.server.dininghall
 
 import com.server.dininghall.enum.TableState
-import com.server.dininghall.models.Order
+import com.server.dininghall.models.Distribution
 import com.server.dininghall.models.OrderRequest
 import com.server.dininghall.services.DinningHall
-import com.server.dininghall.services.Menu
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
-class Waiter(id: Int, private val numberOfTables: Int, private val url: String?, private val dinningHall: DinningHall, private val menu: Menu): Thread() {
+class Waiter(id: Int, private val numberOfTables: Int, private val url: String?,
+             private val dinningHall: DinningHall): Thread() {
 
     private val logger = LoggerFactory.getLogger(Waiter::class.java)
 
     private val waiterId: Int = id
 
-
-
-    private val lazyFactor: Int = 4
+    private val lazyFactor: Int = 8
 
     override fun run() {
         logger.info("${Thread.currentThread()} has run. Waiter $waiterId at your service!")
-        // logger.info("Waiter $waiterId I'm ready to take orders")
-        val client = HttpClient.newBuilder().build();
+        logger.info("Waiter $waiterId I'm ready to take orders")
 
         while(true) {
             Thread.sleep(((0..lazyFactor).random() * 1000).toLong())
 
             val awaitingOrder: MutableList<Int> = dinningHall.getWaitingOrderList()
 
-            for (i in 0..numberOfTables) {
-                if(!awaitingOrder.contains(i)) {
-                    // logger.info("Waiter $waiterId checking table - $i")
-                    val table: Table = dinningHall.getTable(i)
-                    if (table.tableState == TableState.OCCUPIED) {
-                        // simplifying logic to use WAITING_ORDER only, not TAKING_ORDER
-                        logger.info("Table ${table.tableNumber} is occupied, Waiter $waiterId taking order")
-                        // TODO add taking order sleep
-                        table.tableState = TableState.WAITING_ORDER
-                        dinningHall.addWaitingOrderList(table.tableNumber)
+            checkTables(awaitingOrder) // PASSES BY EVERY TABLE AND TAKES ORDER AND SENDS TO KITCHEN
 
-                        val data: Order? = table.tableOrder
+            val doneOrder: Distribution? = dinningHall.pickOrder(waiterId)
 
-                        val orderRequest: OrderRequest = OrderRequest(
-                                data?.id, table.tableNumber, waiterId, data?.items, data?.priority, data?.max_wait
-                        )
+            if (doneOrder != null) {
+                var finalTime = (System.currentTimeMillis() - doneOrder.pick_up_time ) / 1000
+                dinningHall.serveTable(doneOrder.table_id)
+                dinningHall.removeWaitingOrderList(doneOrder.table_id)
+                dinningHall.removeDoneOrders(doneOrder)
+                logger.info("Serving table ${doneOrder.table_id} with the order ${doneOrder.order_id}. " +
+                        "taken order time: ${doneOrder.pick_up_time}. Took kitchen ${doneOrder.cooking_time} units of time to make it. " +
+                        "Order at table took: ${finalTime}s" )
+                print("Done order list: " + doneOrder)
 
-                        val request = HttpRequest.newBuilder()
-                                .uri(URI.create("http://${url}:8080/order"))
-                                .POST(HttpRequest.BodyPublishers.ofString(orderRequest.toJSON()))
-                                .header("Content-Type", "application/json")
-                                .build()
-
-                        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-                        logger.info(response.body())
-
-                        Thread.sleep(((0..lazyFactor).random() * 1000).toLong())
-                    }
-                }
-                // logger.info("Waiter $waiterId sees that table $i is currently ${table.tableState}")
+                var result: Int
+                if(finalTime < doneOrder.max_wait) {
+                    result = 5
+                } else if (finalTime > doneOrder.max_wait && finalTime < doneOrder.max_wait * 1.1) {
+                    result = 4
+                } else if (finalTime > doneOrder.max_wait * 1.1 && finalTime < doneOrder.max_wait * 1.2){
+                    result = 3
+                } else if (finalTime > doneOrder.max_wait * 1.2 && finalTime < doneOrder.max_wait * 1.3) {
+                    result = 2
+                } else if (finalTime > doneOrder.max_wait * 1.3 && finalTime < doneOrder.max_wait * 1.4) {
+                    result = 1
+                } else result = 0
+                println(" You receive ${result} stars")
             }
-
-//            checkOrders(client)
-
         }
     }
 
-    private fun checkOrders(client: HttpClient, awaitingOrder: MutableList<Int>) {
-        awaitingOrder.forEach {
-            val request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://${url}:8081/order/$it"))
-                    .header("Content-Type", "application/json")
-                    .build()
+    private fun checkTables(awaitingOrder: MutableList<Int>) {
+        lateinit var orderRequest: OrderRequest
+        for (i in 0..numberOfTables) {
+            // optimization reasons by me :)
+            if (!awaitingOrder.contains(i)) {
+                logger.info("Waiter $waiterId checking table - $i")
+                val table: Table = dinningHall.getTable(i)
+                if (table.tableState == TableState.OCCUPIED) {
+                    orderRequest = dinningHall.takeOrder(table, waiterId)
 
-            val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                    val response = sendOrder(orderRequest)
+
+                    logger.info(response?.body())
+
+                    sleep(((0..lazyFactor).random() * 1000).toLong())
+                }
+                logger.info("Waiter $waiterId sees that table $i is currently ${table.tableState}")
+            }
         }
+    }
+
+    private fun sendOrder(orderRequest: OrderRequest): HttpResponse<String>? {
+        val client = HttpClient.newBuilder().build()
+        val request = HttpRequest.newBuilder()
+                .uri(URI.create("http://${url}:8080/order"))
+                .POST(HttpRequest.BodyPublishers.ofString(orderRequest.toJSON()))
+                .header("Content-Type", "application/json")
+                .build()
+
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        return response
     }
 }
