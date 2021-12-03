@@ -17,25 +17,27 @@ class Menu() {
     private var indexId: Int = 0
 
     fun generateOrder(table: Table): Order {
-        val maxFoodItems: Int = (0..2).random()
-        var preparationTime: Double = 0.0
+        val maxFoodItems: Int = (0..3).random()
         var orderList: MutableList<Int> = arrayListOf()
-        val priority: Int = (1..3).random()
-
+        var maxTime: Int = 0
         for (i in 0..maxFoodItems) {
             var currentFoodInIteration = menu[(0..9).random()]
-            preparationTime += currentFoodInIteration.`preparation-time`
+
+            if (currentFoodInIteration.`preparation-time` > maxTime){
+                maxTime = currentFoodInIteration.`preparation-time`
+            }
             orderList.add(currentFoodInIteration.id)
         }
-        indexId += 1;
+        indexId += 1
 
-        println("Table ${table.tableNumber} has order id  " + indexId + " with the items " + orderList + " that will be done in " + preparationTime*1.3)
-        return Order(indexId, orderList, 2, (preparationTime * 1.3).toInt())
+        var finalMaxTime = maxTime * 1.3
+        println("Max Waiting Time is " + finalMaxTime)
+        // println("Size of the list" + orderList.size)
+
+        return Order(indexId, orderList, 2, finalMaxTime.toInt())
     }
 
-
     fun getMeThatMenu() : List<FoodItem> {
-
         val jsonParser = JsonParser()
         val jsonData: JsonObject = jsonParser.parse(""" 
                 {

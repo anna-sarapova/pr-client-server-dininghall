@@ -8,6 +8,6 @@ data class Distribution (
     val priority: Int,
     val max_wait: Int,
     val pick_up_time: Long,
-    val cooking_time: Int,
+    val cooking_time: Long,
     val cooking_details: MutableList<CookingDetail>
 )
